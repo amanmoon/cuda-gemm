@@ -10,12 +10,11 @@
 using uint = unsigned int;
 
 template <typename T, typename accT>
-__global__ void naiveGEMM(uint A, uint B, uint C,
-                                T *ptrA, T *ptrB, T *ptrC)
+__global__ void naiveCoalescingGEMM(uint A, uint B, uint C,
+                                    T *ptrA, T *ptrB, T *ptrC)
 {
-    // intentionally flipped x and y for preventing coalescing
-    const uint y = blockIdx.x * blockDim.x + threadIdx.x;
-    const uint x = blockIdx.y * blockDim.y + threadIdx.y;
+    const uint x = blockIdx.x * blockDim.x + threadIdx.x;
+    const uint y = blockIdx.y * blockDim.y;
 
     accT temp = accT(0);
 
@@ -30,7 +29,7 @@ __global__ void naiveGEMM(uint A, uint B, uint C,
     }
 }
 
-template __global__ void naiveGEMM<float, float>(
+template __global__ void naiveCoalescingGEMM<float, float>(
     uint A, uint B, uint C,
     float *ptrA, float *ptrB, float *ptrC);
 
@@ -83,15 +82,15 @@ void benchmark(uint M, uint K, uint N)
         sizeB * sizeof(float),
         cudaMemcpyHostToDevice);
 
-    // 16 x 16 threads per block
-    dim3 blockDim(16, 16);
+    // 253 threads per block
+    dim3 blockDim(256);
 
     dim3 gridDim(
         (N + blockDim.x - 1) / blockDim.x,
         (M + blockDim.y - 1) / blockDim.y);
 
     // Warmup
-    naiveGEMM<float, float><<<gridDim, blockDim>>>(
+    naiveCoalescingGEMM<float, float><<<gridDim, blockDim>>>(
         M, K, N,
         d_A, d_B, d_C);
 
@@ -109,7 +108,7 @@ void benchmark(uint M, uint K, uint N)
 
     for (int i = 0; i < iterations; i++)
     {
-        naiveGEMM<float, float><<<gridDim, blockDim>>>(
+        naiveCoalescingGEMM<float, float><<<gridDim, blockDim>>>(
             M, K, N,
             d_A, d_B, d_C);
     }
