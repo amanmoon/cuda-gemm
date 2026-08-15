@@ -117,7 +117,7 @@ void benchmark(uint M, uint K, uint N)
               << (std::to_string(time_ms) + " ms");
 
     std::cout << std::setw(18)
-              << (std::to_string(gflops) + " GFLOP");
+              << (std::to_string(gflops) + " GFLOP/s");
 
     std::cout << std::setw(10)
               << (correct ? "PASS" : "FAIL");
