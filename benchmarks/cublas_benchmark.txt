@@ -1,0 +1,7 @@
+Matrix                    Time            GFLOP/s               Result    Max Error
+128 x 128 x 128           0.006595 ms     635.963087 GFLOP/s    PASS      6.675720e-06
+256 x 256 x 256           0.008557 ms     3921.376232 GFLOP/s   PASS      1.144409e-05
+512 x 512 x 512           0.027539 ms     9747.395118 GFLOP/s   PASS      1.907349e-05
+1024 x 1024 x 1024        0.110835 ms     19375.466935 GFLOP/s  PASS      4.556775e-05
+2048 x 2048 x 2048        0.687154 ms     25001.498557 GFLOP/s  PASS      6.103516e-05
+4096 x 4096 x 4096        5.797603 ms     23706.167943 GFLOP/s  PASS      3.509521e-04
