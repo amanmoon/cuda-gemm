@@ -10,59 +10,67 @@
 
 using uint = unsigned int;
 
-constexpr uint regBlockHeight = 4;
-constexpr uint regBlockWidth = 4;
-constexpr uint cacheDim = 16;
+constexpr uint THREADS_PER_BLOCK = 256;
 
-constexpr uint cK = cacheDim / regBlockHeight; // 4
-constexpr uint cM = cacheDim * regBlockHeight; // 64
-constexpr uint cN = cacheDim * regBlockHeight; // 64
+constexpr uint cK = 32;  // 4
+constexpr uint cM = 64; // 64
+constexpr uint cN = 64; // 64
 
-constexpr uint TM = regBlockHeight;
-constexpr uint TN = regBlockHeight;
+constexpr uint TM = 4;
+constexpr uint TN = 4;
 
 template <typename T, typename accT>
 __global__ void twoDBlockTiling(uint A, uint B, uint C,
-                                const T *ptrA, const T *ptrB, T *ptrC)
+                                T *ptrA, T *ptrB, T *ptrC)
 {
     __shared__ T aCache[cM][cK];
     __shared__ T bCache[cK][cN];
 
-    uint loadRowA = threadIdx.x / cK; // [0, 63]
-    uint loadColA = threadIdx.x % cK; // [0, 3]
+    uint loadRowA = threadIdx.x / cK; // [0, 32]
+    uint loadColA = threadIdx.x % cK; // [0, 8]
 
-    uint loadRowB = threadIdx.x / cN; // [0, 3]
-    uint loadColB = threadIdx.x % cN; // [0, 63]
+    uint loadRowB = threadIdx.x / cN; // [0, 128]
+    uint loadColB = threadIdx.x % cN; // [0, 2]
 
-    // few threads sits idle after loading data in smem
-    uint threadRow = threadIdx.x / (cN / TN); // [0, 15]
-    uint threadCol = threadIdx.x % (cN / TN); // [0, 15]
+    uint threadRow = threadIdx.x / (cN / TN); // [0, 16]
+    uint threadCol = threadIdx.x % (cN / TN); // [0, 16]
+
+    constexpr uint loadAOffSet = THREADS_PER_BLOCK / cK;
+    constexpr uint loadBOffSet = THREADS_PER_BLOCK / cN;
 
     T tmpMat[TM][TN] = {T(0)};
 
-    const T *locA = ptrA + blockIdx.y * cM * B;
-    const T *locB = ptrB + blockIdx.x * cN;
+    T *locA = ptrA + blockIdx.y * cM * B;
+    T *locB = ptrB + blockIdx.x * cN;
+    T *locC = ptrC + cM * blockIdx.y * C + cN * blockIdx.x;
 
     for (int blockTileIdx = 0; blockTileIdx < B; blockTileIdx += cK)
     {
-        aCache[loadRowA][loadColA] = locA[loadRowA * B + blockTileIdx + loadColA];
-        bCache[loadRowB][loadColB] = locB[(loadRowB + blockTileIdx) * C + loadColB];
+        for (uint offset = 0; offset < cM; offset += loadAOffSet)
+        {
+            aCache[loadRowA + offset][loadColA] = locA[(loadRowA + offset) * B + blockTileIdx + loadColA];
+        }
 
+        for (uint offset = 0; offset < cK; offset += loadBOffSet)
+        {
+            bCache[loadRowB + offset][loadColB] = locB[(loadRowB + offset + blockTileIdx) * C + loadColB];
+        }
+        
         __syncthreads();
 
-        T regA[TM] = {accT(0)};
-        T regB[TN] = {accT(0)};
+        accT regA[TM] = {accT(0)};
+        accT regB[TN] = {accT(0)};
 
         for (int cacheIdx = 0; cacheIdx < cK; cacheIdx++)
         {
             for (int regIdx = 0; regIdx < TM; regIdx++)
             {
-                regA[regIdx] = aCache[(threadRow * TM) + regIdx][cacheIdx];
+                regA[regIdx] = aCache[threadRow * TM + regIdx][cacheIdx];
             }
 
             for (int regIdx = 0; regIdx < TN; regIdx++)
             {
-                regB[regIdx] = bCache[cacheIdx][(threadCol * TN) + regIdx];
+                regB[regIdx] = bCache[cacheIdx][threadCol * TN + regIdx];
             }
 
             for (int col = 0; col < TN; col++)
@@ -81,13 +89,7 @@ __global__ void twoDBlockTiling(uint A, uint B, uint C,
     {
         for (int row = 0; row < TM; row++)
         {
-            uint globalRow = blockIdx.y * cM + (threadRow * TM) + row;
-            uint globalCol = blockIdx.x * cN + (threadCol * TN) + col;
-
-            if (globalRow < A && globalCol < C)
-            {
-                ptrC[globalRow * C + globalCol] = tmpMat[row][col];
-            }
+            locC[((threadRow * TM) + row) * C + (threadCol * TN) + col] = tmpMat[row][col];
         }
     }
 }
@@ -147,8 +149,8 @@ void benchmark(uint M, uint K, uint N)
 
     // --- Kernel Configuration ---
     // 256 threads per block map to a 64x64 block computing 4x4 elements per thread
-    dim3 blockDim(cM * cK);
-    dim3 gridDim(N / cN, M / cM);
+    dim3 blockDim(THREADS_PER_BLOCK);
+    dim3 gridDim((N + cN - 1) / cN, (M + cM - 1) / cM);
 
     // Warmup
     twoDBlockTiling<float, float><<<gridDim, blockDim>>>(M, K, N, d_A, d_B, d_C);
