@@ -1,0 +1,22 @@
+Without coalescing
+
+Matrix                    Time            GFLOP/s               Result    Max Error
+128 x 128 x 128           0.031603 ms     132.717703 GFLOP/s    PASS      6.198883e-06
+256 x 256 x 256           0.061843 ms     542.572713 GFLOP/s    PASS      1.335144e-05
+512 x 512 x 512           0.214845 ms     1249.438931 GFLOP/s   PASS      4.768372e-05
+1024 x 1024 x 1024        1.039904 ms     2065.078702 GFLOP/s   PASS      7.629395e-05
+2048 x 2048 x 2048        7.348128 ms     2337.992721 GFLOP/s   PASS      1.525879e-04
+4096 x 4096 x 4096        56.265826 ms    2442.671906 GFLOP/s   PASS      3.509521e-04
+8192 x 8192 x 8192        447.528857 ms   2456.850792 GFLOP/s   PASS      7.019043e-04
+
+
+With coalescing
+
+Matrix                    Time            GFLOP/s               Result    Max Error
+128 x 128 x 128           0.011926 ms     351.682321 GFLOP/s    PASS      6.198883e-06
+256 x 256 x 256           0.022445 ms     1494.975793 GFLOP/s   PASS      1.335144e-05
+512 x 512 x 512           0.051190 ms     5243.863212 GFLOP/s   PASS      4.768372e-05
+1024 x 1024 x 1024        0.232982 ms     9217.364380 GFLOP/s   PASS      7.629395e-05
+2048 x 2048 x 2048        1.547520 ms     11101.549264 GFLOP/s  PASS      1.525879e-04
+4096 x 4096 x 4096        12.736797 ms    10790.700214 GFLOP/s  PASS      3.509521e-04
+8192 x 8192 x 8192        119.866870 ms   9172.773317 GFLOP/s   PASS      7.019043e-04

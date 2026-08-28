@@ -12,7 +12,7 @@ using uint = unsigned int;
 
 constexpr uint THREADS_PER_BLOCK = 256;
 
-constexpr uint cK = 8;   // 4
+constexpr uint cK = 16;   // 4
 constexpr uint cM = 128; // 64
 constexpr uint cN = 128; // 64
 
@@ -43,15 +43,37 @@ __global__ void vectorizedSmemCaching(const uint A, const uint B, const uint C,
 
     for (int blockTileIdx = 0; blockTileIdx < B; blockTileIdx += cK)
     {
-        float4 tmp = reinterpret_cast<float4 *>(&locA[loadRowA * B + loadColA * 4 + blockTileIdx])[0];
+        // load A
+        // first half
+        float4 tmp = reinterpret_cast<float4 *>(
+            &locA[loadRowA * B + loadColA * 4 + blockTileIdx])[0];
+
         aCache[loadColA * 4 + 0][loadRowA] = tmp.x;
         aCache[loadColA * 4 + 1][loadRowA] = tmp.y;
         aCache[loadColA * 4 + 2][loadRowA] = tmp.z;
         aCache[loadColA * 4 + 3][loadRowA] = tmp.w;
 
-        // bCache[loadRowB + offset][loadColB] = locB[(loadRowB + offset + blockTileIdx) * C + loadColB];
-        reinterpret_cast<float4 *>(&bCache[loadRowB][loadColB * 4])[0] = reinterpret_cast<float4 *>(&locB[(loadRowB + blockTileIdx) * C + loadColB * 4])[0];
+        // second half
+        uint loadRowA2 = loadRowA + cM / 2;
 
+        tmp = reinterpret_cast<float4 *>(
+            &locA[loadRowA2 * B + loadColA * 4 + blockTileIdx])[0];
+
+        aCache[loadColA * 4 + 0][loadRowA2] = tmp.x;
+        aCache[loadColA * 4 + 1][loadRowA2] = tmp.y;
+        aCache[loadColA * 4 + 2][loadRowA2] = tmp.z;
+        aCache[loadColA * 4 + 3][loadRowA2] = tmp.w;
+
+        // bCache[loadRowB + offset][loadColB] = locB[(loadRowB + offset + blockTileIdx) * C + loadColB];
+
+        // load B
+        reinterpret_cast<float4 *>(&bCache[loadRowB][loadColB * 4])[0] =
+            reinterpret_cast<float4 *>(
+                &locB[(loadRowB + blockTileIdx) * C + loadColB * 4])[0];
+
+        reinterpret_cast<float4 *>(&bCache[loadRowB + cK / 2][loadColB * 4])[0] =
+            reinterpret_cast<float4 *>(
+                &locB[(loadRowB + cK / 2 + blockTileIdx) * C + loadColB * 4])[0];
         __syncthreads();
 
         accT regA[TM] = {accT(0)};
