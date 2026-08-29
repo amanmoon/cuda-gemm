@@ -50,8 +50,8 @@ All benchmarks were recorded on the following system:
 | **$512 \times 512 \times 512$** | 2.34&nbsp;GFLOP/s<br>*(114.62 ms)* | 598.12&nbsp;GFLOP/s<br>*(0.4488 ms)* | 1915.34&nbsp;GFLOP/s<br>*(0.1402 ms)* | 3132.30&nbsp;GFLOP/s<br>*(0.0857 ms)* | 1249.44&nbsp;GFLOP/s<br>*(0.2148 ms)* | 5243.86&nbsp;GFLOP/s<br>*(0.0512 ms)* | 7879.59&nbsp;GFLOP/s<br>*(0.0341 ms)* | 8664.13&nbsp;GFLOP/s<br>*(0.0310 ms)* | **9928.52&nbsp;GFLOP/s**<br>*(0.0270 ms)* |
 | **$1024 \times 1024 \times 1024$** | 1.45&nbsp;GFLOP/s<br>*(1478.30 ms)* | 629.16&nbsp;GFLOP/s<br>*(3.413 ms)* | 1790.41&nbsp;GFLOP/s<br>*(1.199 ms)* | 3425.44&nbsp;GFLOP/s<br>*(0.6269 ms)* | 2065.08&nbsp;GFLOP/s<br>*(1.040 ms)* | 9217.36&nbsp;GFLOP/s<br>*(0.2330 ms)* | 14173.54&nbsp;GFLOP/s<br>*(0.1515 ms)* | 14776.16&nbsp;GFLOP/s<br>*(0.1453 ms)* | **19440.29&nbsp;GFLOP/s**<br>*(0.1105 ms)* |
 | **$2048 \times 2048 \times 2048$** | 0.81&nbsp;GFLOP/s<br>*(21298.78 ms)* | 634.46&nbsp;GFLOP/s<br>*(27.08 ms)* | 1706.15&nbsp;GFLOP/s<br>*(10.07 ms)* | 3476.63&nbsp;GFLOP/s<br>*(4.942 ms)* | 2337.99&nbsp;GFLOP/s<br>*(7.348 ms)* | 11101.55&nbsp;GFLOP/s<br>*(1.548 ms)* | 16093.69&nbsp;GFLOP/s<br>*(1.067 ms)* | **18996.48&nbsp;GFLOP/s**<br>*(0.9044 ms)* | **24924.54&nbsp;GFLOP/s**<br>*(0.6893 ms)* |
-| **$4096 \times 4096 \times 4096$** | 0.35&nbsp;GFLOP/s<br>*(395621.22 ms)* | 621.23&nbsp;GFLOP/s<br>*(221.24 ms)* | 1145.32&nbsp;GFLOP/s<br>*(120.00 ms)* | 3201.09&nbsp;GFLOP/s<br>*(42.94 ms)* | 2442.67&nbsp;GFLOP/s<br>*(56.27 ms)* | 10790.70&nbsp;GFLOP/s<br>*(12.74 ms)* | 14359.50&nbsp;GFLOP/s<br>*(9.571 ms)* | **20483.71&nbsp;GFLOP/s**<br>*(6.710 ms)* | **23648.83&nbsp;GFLOP/s**<br>*(5.812 ms)* |
-| **$8192 \times 8192 \times 8192$** | N/A | 595.95&nbsp;GFLOP/s<br>*(1844.98 ms)* | 354.47&nbsp;GFLOP/s<br>*(3101.83 ms)* | 2846.37&nbsp;GFLOP/s<br>*(386.29 ms)* | 2456.85&nbsp;GFLOP/s<br>*(447.53 ms)* | 9172.77&nbsp;GFLOP/s<br>*(119.87 ms)* | 12432.11&nbsp;GFLOP/s<br>*(88.44 ms)* | **19663.92&nbsp;GFLOP/s**<br>*(55.92 ms)* | **23328.82&nbsp;GFLOP/s**<br>*(47.13 ms)* |
+| **$4096 \times 4096 \times 4096$** | 0.35&nbsp;GFLOP/s<br>*(395621.22 ms)* | 621.23&nbsp;GFLOP/s<br>*(221.24 ms)* | 1145.32&nbsp;GFLOP/s<br>*(120.00 ms)* | 3201.09&nbsp;GFLOP/s<br>*(42.94 ms)* | 2442.67&nbsp;GFLOP/s<br>*(56.27 ms)* | 10790.70&nbsp;GFLOP/s<br>*(12.74 ms)* | 15136.99&nbsp;GFLOP/s<br>*(9.080 ms)* | **20483.71&nbsp;GFLOP/s**<br>*(6.710 ms)* | **23648.83&nbsp;GFLOP/s**<br>*(5.812 ms)* |
+| **$8192 \times 8192 \times 8192$** | N/A | 595.95&nbsp;GFLOP/s<br>*(1844.98 ms)* | 354.47&nbsp;GFLOP/s<br>*(3101.83 ms)* | 2846.37&nbsp;GFLOP/s<br>*(386.29 ms)* | 2456.85&nbsp;GFLOP/s<br>*(447.53 ms)* | 9172.77&nbsp;GFLOP/s<br>*(119.87 ms)* | 14668.46&nbsp;GFLOP/s<br>*(74.96 ms)* | **19663.92&nbsp;GFLOP/s**<br>*(55.92 ms)* | **23328.82&nbsp;GFLOP/s**<br>*(47.13 ms)* |
 
 > All GPU benchmarks report **PASS** with maximum absolute numerical error bounded under $7.1 \times 10^{-4}$ against OpenBLAS reference outputs.
 
@@ -76,6 +76,19 @@ All benchmarks were recorded on the following system:
 | **2D Block Tiling** | 1.067 ms | 16093.69 GFLOP/s | 64.57% |
 | **Vectorized Smem Loading** | 0.904 ms | 18996.48 GFLOP/s | **76.22%** |
 | **NVIDIA cuBLAS** | 0.689 ms | 24924.54 GFLOP/s | **100.00%** |
+
+### $8192 \times 8192 \times 8192$ Matrix Performance Breakdown
+
+| Implementation | Execution Time | Throughput | Performance vs. cuBLAS (%) |
+| :--- | :---: | :---: | :---: |
+| **Naive CUDA** | 1844.98 ms | 595.95 GFLOP/s | 2.55% |
+| **Naive Coalesced CUDA** | 3101.83 ms | 354.47 GFLOP/s | 1.52% |
+| **1D Block Tiling (Naive)** | 447.53 ms | 2456.85 GFLOP/s | 10.53% |
+| **Shared Memory (Smem) Tiled** | 386.29 ms | 2846.37 GFLOP/s | 12.20% |
+| **1D Block Tiling (Coalesced)** | 119.87 ms | 9172.77 GFLOP/s | 39.32% |
+| **2D Block Tiling** | 74.96 ms | 14668.46 GFLOP/s | 62.88% |
+| **Vectorized Smem Loading** | 55.92 ms | 19663.92 GFLOP/s | **84.29%** |
+| **NVIDIA cuBLAS** | 47.13 ms | 23328.82 GFLOP/s | **100.00%** |
 
 1. **CPU vs GPU Baseline**: Even the naive uncoalesced CUDA kernel achieves a **~780x speedup** over single-threaded C++ GEMM at $2048 \times 2048$ matrix size due to massive parallel execution across GPU cores.
 2. **Coalesced Memory Access**: Reordering memory indexing to align contiguous thread accesses within a warp yields a **~2.69x speedup** over naive indexing at $2048 \times 2048$, resolving unaligned memory transactions.
