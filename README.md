@@ -55,9 +55,11 @@ All benchmarks were recorded on the following system:
 
 > All GPU benchmarks report **PASS** with maximum absolute numerical error bounded under $7.1 \times 10^{-4}$ against OpenBLAS reference outputs.
 
-### GFLOP/s vs. Matrix Size Chart
+### GFLOP/s vs. Matrix Size Charts
 
 ![CUDA GEMM Performance (GFLOP/s vs Matrix Size)](./benchmarks/gflops_vs_matrix_size.png)
+
+![CUDA GEMM Performance (Scaled X-Axis)](./benchmarks/gflops_vs_matrix_size_scaled.png)
 
 ---
 
@@ -110,6 +112,7 @@ cuda-gemm/
 │   ├── cpu_benchmark.txt              # CPU reference benchmark log
 │   ├── cublas_benchmark.txt           # cuBLAS benchmark log
 │   ├── gflops_vs_matrix_size.png      # Generated benchmark chart
+│   ├── gflops_vs_matrix_size_scaled.png # Generated benchmark chart (scaled X-axis)
 │   ├── naive_benchmark.txt            # Uncoalesced CUDA kernel log
 │   ├── naive_coalescing_benchmark.txt # Coalesced CUDA kernel log
 │   ├── smem_benchmark.txt             # Shared memory tiling log
