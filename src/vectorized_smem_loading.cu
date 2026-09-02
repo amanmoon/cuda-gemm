@@ -12,7 +12,7 @@ using uint = unsigned int;
 
 constexpr uint THREADS_PER_BLOCK = 256;
 
-constexpr uint cK = 16;   // 4
+constexpr uint cK = 16;  // 4
 constexpr uint cM = 128; // 64
 constexpr uint cN = 128; // 64
 
@@ -41,6 +41,7 @@ __global__ void vectorizedSmemCaching(const uint A, const uint B, const uint C,
     T *locB = ptrB + blockIdx.x * cN;
     T *locC = ptrC + cM * blockIdx.y * C + cN * blockIdx.x;
 
+    #pragma unroll
     for (int blockTileIdx = 0; blockTileIdx < B; blockTileIdx += cK)
     {
         // load A
@@ -101,6 +102,7 @@ __global__ void vectorizedSmemCaching(const uint A, const uint B, const uint C,
 
         __syncthreads();
     }
+    
     #pragma unroll
     for (int col = 0; col < TN; col += 4)
     {
@@ -264,8 +266,13 @@ int main()
     benchmark(256, 256, 256);
     benchmark(512, 512, 512);
     benchmark(1024, 1024, 1024);
+    benchmark(1536, 1536, 1536);
     benchmark(2048, 2048, 2048);
+    benchmark(3072, 3072, 3072);
     benchmark(4096, 4096, 4096);
+    benchmark(5120, 5120, 5120);
+    benchmark(6144, 6144, 6144);
+    benchmark(7168, 7168, 7168);
     benchmark(8192, 8192, 8192);
 
     return 0;

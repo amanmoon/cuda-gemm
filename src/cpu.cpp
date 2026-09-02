@@ -141,5 +141,7 @@ int main()
     benchmark(1024, 1024, 1024);
     benchmark(2048, 2048, 2048);
     benchmark(4096, 4096, 4096);
+    benchmark(8192, 8192, 8192);
+
     return 0;
 }

@@ -17,6 +17,8 @@ constexpr uint cK = cacheDim / regBlockHeight; // K = width of A, height of B, s
 constexpr uint cM = cacheDim * regBlockHeight; // M = height of A
 constexpr uint cN = cacheDim * regBlockHeight; // N = width  of B
 
+constexpr uint TM = cM / cK;
+
 template <typename T, typename accT>
 __global__ void oneDBlockTiling(uint A, uint B, uint C,
                                 T *ptrA, T *ptrB, T *ptrC)
@@ -25,8 +27,6 @@ __global__ void oneDBlockTiling(uint A, uint B, uint C,
     // thread.y = [0, 16]
     __shared__ T aCache[cM][cK]; // 64 x 4
     __shared__ T bCache[cK][cN]; // 4 x 64
-
-    constexpr uint TM = cM / cK;
 
     accT tmpVec[TM] = {accT(0)};
 
@@ -294,12 +294,19 @@ int main()
               << std::setw(10) << "Result"
               << "Max Error\n";
 
+    benchmark(64, 64, 64);
     benchmark(128, 128, 128);
     benchmark(256, 256, 256);
     benchmark(512, 512, 512);
     benchmark(1024, 1024, 1024);
+    benchmark(1536, 1536, 1536);
     benchmark(2048, 2048, 2048);
+    benchmark(3072, 3072, 3072);
     benchmark(4096, 4096, 4096);
+    benchmark(5120, 5120, 5120);
+    benchmark(6144, 6144, 6144);
+    benchmark(7168, 7168, 7168);
+    benchmark(8192, 8192, 8192);
 
     return 0;
 }

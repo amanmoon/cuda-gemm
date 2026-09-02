@@ -227,8 +227,14 @@ int main()
     benchmark(256, 256, 256);
     benchmark(512, 512, 512);
     benchmark(1024, 1024, 1024);
+    benchmark(1536, 1536, 1536);
     benchmark(2048, 2048, 2048);
+    benchmark(3072, 3072, 3072);
     benchmark(4096, 4096, 4096);
+    benchmark(5120, 5120, 5120);
+    benchmark(6144, 6144, 6144);
+    benchmark(7168, 7168, 7168);
+    benchmark(8192, 8192, 8192);
 
     return 0;
 }

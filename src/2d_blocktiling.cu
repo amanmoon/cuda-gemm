@@ -12,12 +12,12 @@ using uint = unsigned int;
 
 constexpr uint THREADS_PER_BLOCK = 256;
 
-constexpr uint cK = 32;  // 4
-constexpr uint cM = 64; // 64
-constexpr uint cN = 64; // 64
+constexpr uint cK = 16;  // 4
+constexpr uint cM = 128; // 64
+constexpr uint cN = 128; // 64
 
-constexpr uint TM = 4;
-constexpr uint TN = 4;
+constexpr uint TM = 8;
+constexpr uint TN = 8;
 
 template <typename T, typename accT>
 __global__ void twoDBlockTiling(uint A, uint B, uint C,
@@ -55,7 +55,7 @@ __global__ void twoDBlockTiling(uint A, uint B, uint C,
         {
             bCache[loadRowB + offset][loadColB] = locB[(loadRowB + offset + blockTileIdx) * C + loadColB];
         }
-        
+
         __syncthreads();
 
         accT regA[TM] = {accT(0)};
@@ -240,8 +240,14 @@ int main()
     benchmark(256, 256, 256);
     benchmark(512, 512, 512);
     benchmark(1024, 1024, 1024);
+    benchmark(1536, 1536, 1536);
     benchmark(2048, 2048, 2048);
+    benchmark(3072, 3072, 3072);
     benchmark(4096, 4096, 4096);
+    benchmark(5120, 5120, 5120);
+    benchmark(6144, 6144, 6144);
+    benchmark(7168, 7168, 7168);
+    benchmark(8192, 8192, 8192);
 
     return 0;
 }
