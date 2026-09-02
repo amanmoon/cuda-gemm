@@ -16,7 +16,9 @@ Matrix multiplication ($C = A \times B$) is the foundational computational kerne
 6. **1D Block Tiling (Coalesced)** (`src/1d_blocktiling_coalescing.cu`): Combining 1D thread block tiling with coalesced global memory transfers to drastically improve arithmetic intensity and bandwidth efficiency.
 7. **2D Block Tiling** (`src/2d_blocktiling.cu`): 2D register tiling ($4 \times 4$ output tile per thread) paired with shared memory caching ($64 \times 64$ block tiles) to maximize register reuse and memory bandwidth utilization.
 8. **Vectorized Shared Memory Loading** (`src/vectorized_smem_loading.cu`): Vectorized memory loads (`float4` / 128-bit vector transfers) combined with 2D block tiling ($8 \times 8$ output tile per thread) to maximize memory transaction width and instruction throughput.
-9. **NVIDIA cuBLAS** (`src/cublas.cu`): Production-grade vendor library performance benchmark (`cublasSgemm`).
+9. **Warp Tiling** (`src/wraptiling.cu`): Hierarchical block-to-warp tiling breakdown ($128 \times 128$ block tiles divided into $64 \times 32$ warp tiles and thread sub-sections) with padded shared memory layouts to prevent bank conflicts and optimize register reuse.
+10. **Warp Tiling with Vectorized Register Loading** (`src/wraptiling_float4_load.cu`): Combining hierarchical warp-level tiling with `float4` (128-bit) vector loads from shared memory into registers for maximum throughput and memory pipeline efficiency.
+11. **NVIDIA cuBLAS** (`src/cublas.cu`): Production-grade vendor library performance benchmark (`cublasSgemm`).
 
 All implementations compute $C = A \times B$ for square single-precision floating-point matrices ($M = K = N$) and automatically validate their output against OpenBLAS `cblas_sgemm` to verify floating-point precision correctness.
 
@@ -43,15 +45,15 @@ All benchmarks were recorded on the following system:
 
 ### Comparative Benchmark Results
 
-| Matrix Size ($M \times K \times N$) | CPU<br>(OpenBLAS Ref) | Naive<br>CUDA | Naive Coalesced<br>CUDA | Shared Memory<br>(2D Tile) | 1D Blocktiling<br>(Naive) | 1D Blocktiling<br>(Coalesced) | 2D Blocktiling | Vectorized<br>Smem Loading | NVIDIA<br>cuBLAS |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **$128 \times 128 \times 128$** | 1.50&nbsp;GFLOP/s<br>*(2.79 ms)* | 293.29&nbsp;GFLOP/s<br>*(0.0143 ms)* | 869.75&nbsp;GFLOP/s<br>*(0.0048 ms)* | **1030.44&nbsp;GFLOP/s**<br>*(0.0041 ms)* | 132.72&nbsp;GFLOP/s<br>*(0.0316 ms)* | 351.68&nbsp;GFLOP/s<br>*(0.0119 ms)* | 589.35&nbsp;GFLOP/s<br>*(0.0071 ms)* | 683.73&nbsp;GFLOP/s<br>*(0.0061 ms)* | 614.50&nbsp;GFLOP/s<br>*(0.0068 ms)* |
-| **$256 \times 256 \times 256$** | 2.40&nbsp;GFLOP/s<br>*(13.95 ms)* | 518.87&nbsp;GFLOP/s<br>*(0.0647 ms)* | 1644.83&nbsp;GFLOP/s<br>*(0.0204 ms)* | 2164.69&nbsp;GFLOP/s<br>*(0.0155 ms)* | 542.57&nbsp;GFLOP/s<br>*(0.0618 ms)* | 1494.98&nbsp;GFLOP/s<br>*(0.0224 ms)* | 2619.48&nbsp;GFLOP/s<br>*(0.0128 ms)* | 2769.61&nbsp;GFLOP/s<br>*(0.0121 ms)* | **4057.17&nbsp;GFLOP/s**<br>*(0.0083 ms)* |
-| **$512 \times 512 \times 512$** | 2.34&nbsp;GFLOP/s<br>*(114.62 ms)* | 598.12&nbsp;GFLOP/s<br>*(0.4488 ms)* | 1915.34&nbsp;GFLOP/s<br>*(0.1402 ms)* | 3132.30&nbsp;GFLOP/s<br>*(0.0857 ms)* | 1249.44&nbsp;GFLOP/s<br>*(0.2148 ms)* | 5243.86&nbsp;GFLOP/s<br>*(0.0512 ms)* | 7879.59&nbsp;GFLOP/s<br>*(0.0341 ms)* | 8664.13&nbsp;GFLOP/s<br>*(0.0310 ms)* | **9928.52&nbsp;GFLOP/s**<br>*(0.0270 ms)* |
-| **$1024 \times 1024 \times 1024$** | 1.45&nbsp;GFLOP/s<br>*(1478.30 ms)* | 629.16&nbsp;GFLOP/s<br>*(3.413 ms)* | 1790.41&nbsp;GFLOP/s<br>*(1.199 ms)* | 3425.44&nbsp;GFLOP/s<br>*(0.6269 ms)* | 2065.08&nbsp;GFLOP/s<br>*(1.040 ms)* | 9217.36&nbsp;GFLOP/s<br>*(0.2330 ms)* | 14173.54&nbsp;GFLOP/s<br>*(0.1515 ms)* | 14776.16&nbsp;GFLOP/s<br>*(0.1453 ms)* | **19440.29&nbsp;GFLOP/s**<br>*(0.1105 ms)* |
-| **$2048 \times 2048 \times 2048$** | 0.81&nbsp;GFLOP/s<br>*(21298.78 ms)* | 634.46&nbsp;GFLOP/s<br>*(27.08 ms)* | 1706.15&nbsp;GFLOP/s<br>*(10.07 ms)* | 3476.63&nbsp;GFLOP/s<br>*(4.942 ms)* | 2337.99&nbsp;GFLOP/s<br>*(7.348 ms)* | 11101.55&nbsp;GFLOP/s<br>*(1.548 ms)* | 16093.69&nbsp;GFLOP/s<br>*(1.067 ms)* | **18996.48&nbsp;GFLOP/s**<br>*(0.9044 ms)* | **24924.54&nbsp;GFLOP/s**<br>*(0.6893 ms)* |
-| **$4096 \times 4096 \times 4096$** | 0.35&nbsp;GFLOP/s<br>*(395621.22 ms)* | 621.23&nbsp;GFLOP/s<br>*(221.24 ms)* | 1145.32&nbsp;GFLOP/s<br>*(120.00 ms)* | 3201.09&nbsp;GFLOP/s<br>*(42.94 ms)* | 2442.67&nbsp;GFLOP/s<br>*(56.27 ms)* | 10790.70&nbsp;GFLOP/s<br>*(12.74 ms)* | 15136.99&nbsp;GFLOP/s<br>*(9.080 ms)* | **20483.71&nbsp;GFLOP/s**<br>*(6.710 ms)* | **23648.83&nbsp;GFLOP/s**<br>*(5.812 ms)* |
-| **$8192 \times 8192 \times 8192$** | N/A | 595.95&nbsp;GFLOP/s<br>*(1844.98 ms)* | 354.47&nbsp;GFLOP/s<br>*(3101.83 ms)* | 2846.37&nbsp;GFLOP/s<br>*(386.29 ms)* | 2456.85&nbsp;GFLOP/s<br>*(447.53 ms)* | 9172.77&nbsp;GFLOP/s<br>*(119.87 ms)* | 14668.46&nbsp;GFLOP/s<br>*(74.96 ms)* | **19663.92&nbsp;GFLOP/s**<br>*(55.92 ms)* | **23328.82&nbsp;GFLOP/s**<br>*(47.13 ms)* |
+| Matrix Size ($M \times K \times N$) | CPU<br>(OpenBLAS Ref) | Naive<br>CUDA | Naive Coalesced<br>CUDA | Shared Memory<br>(2D Tile) | 1D Blocktiling<br>(Naive) | 1D Blocktiling<br>(Coalesced) | 2D Blocktiling | Vectorized<br>Smem Loading | Warp Tiling | Warp Tiling<br>(float4 Load) | NVIDIA<br>cuBLAS |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **$128 \times 128 \times 128$** | 1.50&nbsp;GFLOP/s<br>*(2.79 ms)* | 293.29&nbsp;GFLOP/s<br>*(0.0143 ms)* | 869.75&nbsp;GFLOP/s<br>*(0.0048 ms)* | **1030.44&nbsp;GFLOP/s**<br>*(0.0041 ms)* | 132.72&nbsp;GFLOP/s<br>*(0.0316 ms)* | 351.68&nbsp;GFLOP/s<br>*(0.0119 ms)* | 589.35&nbsp;GFLOP/s<br>*(0.0071 ms)* | 683.73&nbsp;GFLOP/s<br>*(0.0061 ms)* | 346.93&nbsp;GFLOP/s<br>*(0.0121 ms)* | 338.51&nbsp;GFLOP/s<br>*(0.0124 ms)* | 614.50&nbsp;GFLOP/s<br>*(0.0068 ms)* |
+| **$256 \times 256 \times 256$** | 2.40&nbsp;GFLOP/s<br>*(13.95 ms)* | 518.87&nbsp;GFLOP/s<br>*(0.0647 ms)* | 1644.83&nbsp;GFLOP/s<br>*(0.0204 ms)* | 2164.69&nbsp;GFLOP/s<br>*(0.0155 ms)* | 542.57&nbsp;GFLOP/s<br>*(0.0618 ms)* | 1494.98&nbsp;GFLOP/s<br>*(0.0224 ms)* | 2619.48&nbsp;GFLOP/s<br>*(0.0128 ms)* | 2769.61&nbsp;GFLOP/s<br>*(0.0121 ms)* | 1443.92&nbsp;GFLOP/s<br>*(0.0232 ms)* | 1394.94&nbsp;GFLOP/s<br>*(0.0241 ms)* | **4057.17&nbsp;GFLOP/s**<br>*(0.0083 ms)* |
+| **$512 \times 512 \times 512$** | 2.34&nbsp;GFLOP/s<br>*(114.62 ms)* | 598.12&nbsp;GFLOP/s<br>*(0.4488 ms)* | 1915.34&nbsp;GFLOP/s<br>*(0.1402 ms)* | 3132.30&nbsp;GFLOP/s<br>*(0.0857 ms)* | 1249.44&nbsp;GFLOP/s<br>*(0.2148 ms)* | 5243.86&nbsp;GFLOP/s<br>*(0.0512 ms)* | 7879.59&nbsp;GFLOP/s<br>*(0.0341 ms)* | 8664.13&nbsp;GFLOP/s<br>*(0.0310 ms)* | 6242.92&nbsp;GFLOP/s<br>*(0.0430 ms)* | 6202.76&nbsp;GFLOP/s<br>*(0.0433 ms)* | **9928.52&nbsp;GFLOP/s**<br>*(0.0270 ms)* |
+| **$1024 \times 1024 \times 1024$** | 1.45&nbsp;GFLOP/s<br>*(1478.30 ms)* | 629.16&nbsp;GFLOP/s<br>*(3.413 ms)* | 1790.41&nbsp;GFLOP/s<br>*(1.199 ms)* | 3425.44&nbsp;GFLOP/s<br>*(0.6269 ms)* | 2065.08&nbsp;GFLOP/s<br>*(1.040 ms)* | 9217.36&nbsp;GFLOP/s<br>*(0.2330 ms)* | 14173.54&nbsp;GFLOP/s<br>*(0.1515 ms)* | 14776.16&nbsp;GFLOP/s<br>*(0.1453 ms)* | 13606.00&nbsp;GFLOP/s<br>*(0.1578 ms)* | 13866.33&nbsp;GFLOP/s<br>*(0.1549 ms)* | **19440.29&nbsp;GFLOP/s**<br>*(0.1105 ms)* |
+| **$2048 \times 2048 \times 2048$** | 0.81&nbsp;GFLOP/s<br>*(21298.78 ms)* | 634.46&nbsp;GFLOP/s<br>*(27.08 ms)* | 1706.15&nbsp;GFLOP/s<br>*(10.07 ms)* | 3476.63&nbsp;GFLOP/s<br>*(4.942 ms)* | 2337.99&nbsp;GFLOP/s<br>*(7.348 ms)* | 11101.55&nbsp;GFLOP/s<br>*(1.548 ms)* | 16093.69&nbsp;GFLOP/s<br>*(1.067 ms)* | 18996.48&nbsp;GFLOP/s<br>*(0.9044 ms)* | 21117.28&nbsp;GFLOP/s<br>*(0.8135 ms)* | **21968.60&nbsp;GFLOP/s**<br>*(0.7820 ms)* | **24924.54&nbsp;GFLOP/s**<br>*(0.6893 ms)* |
+| **$4096 \times 4096 \times 4096$** | 0.35&nbsp;GFLOP/s<br>*(395621.22 ms)* | 621.23&nbsp;GFLOP/s<br>*(221.24 ms)* | 1145.32&nbsp;GFLOP/s<br>*(120.00 ms)* | 3201.09&nbsp;GFLOP/s<br>*(42.94 ms)* | 2442.67&nbsp;GFLOP/s<br>*(56.27 ms)* | 10790.70&nbsp;GFLOP/s<br>*(12.74 ms)* | 15136.99&nbsp;GFLOP/s<br>*(9.080 ms)* | 20483.71&nbsp;GFLOP/s<br>*(6.710 ms)* | 22204.23&nbsp;GFLOP/s<br>*(6.190 ms)* | **23423.01&nbsp;GFLOP/s**<br>*(5.868 ms)* | **23648.83&nbsp;GFLOP/s**<br>*(5.812 ms)* |
+| **$8192 \times 8192 \times 8192$** | N/A | 595.95&nbsp;GFLOP/s<br>*(1844.98 ms)* | 354.47&nbsp;GFLOP/s<br>*(3101.83 ms)* | 2846.37&nbsp;GFLOP/s<br>*(386.29 ms)* | 2456.85&nbsp;GFLOP/s<br>*(447.53 ms)* | 9172.77&nbsp;GFLOP/s<br>*(119.87 ms)* | 14668.46&nbsp;GFLOP/s<br>*(74.96 ms)* | 19663.92&nbsp;GFLOP/s<br>*(55.92 ms)* | 20721.30&nbsp;GFLOP/s<br>*(53.06 ms)* | **21964.40&nbsp;GFLOP/s**<br>*(50.06 ms)* | **23328.82&nbsp;GFLOP/s**<br>*(47.13 ms)* |
 
 > All GPU benchmarks report **PASS** with maximum absolute numerical error bounded under $7.1 \times 10^{-4}$ against OpenBLAS reference outputs.
 
@@ -76,8 +78,26 @@ All benchmarks were recorded on the following system:
 | **Shared Memory (Smem) Tiled** | 4.942 ms | 3476.63 GFLOP/s | 13.95% |
 | **1D Block Tiling (Coalesced)** | 1.548 ms | 11101.55 GFLOP/s | 44.54% |
 | **2D Block Tiling** | 1.067 ms | 16093.69 GFLOP/s | 64.57% |
-| **Vectorized Smem Loading** | 0.904 ms | 18996.48 GFLOP/s | **76.22%** |
+| **Vectorized Smem Loading** | 0.904 ms | 18996.48 GFLOP/s | 76.22% |
+| **Warp Tiling** | 0.814 ms | 21117.28 GFLOP/s | 84.72% |
+| **Warp Tiling (float4 Load)** | 0.782 ms | 21968.60 GFLOP/s | **88.14%** |
 | **NVIDIA cuBLAS** | 0.689 ms | 24924.54 GFLOP/s | **100.00%** |
+
+### $4096 \times 4096 \times 4096$ Matrix Performance Breakdown
+
+| Implementation | Execution Time | Throughput | Performance vs. cuBLAS (%) |
+| :--- | :---: | :---: | :---: |
+| **CPU (OpenBLAS Ref)** | 395621.22 ms | 0.35 GFLOP/s | 0.001% |
+| **Naive CUDA** | 221.24 ms | 621.23 GFLOP/s | 2.63% |
+| **Naive Coalesced CUDA** | 120.00 ms | 1145.32 GFLOP/s | 4.84% |
+| **1D Block Tiling (Naive)** | 56.27 ms | 2442.67 GFLOP/s | 10.33% |
+| **Shared Memory (Smem) Tiled** | 42.94 ms | 3201.09 GFLOP/s | 13.54% |
+| **1D Block Tiling (Coalesced)** | 12.74 ms | 10790.70 GFLOP/s | 45.63% |
+| **2D Block Tiling** | 9.080 ms | 15136.99 GFLOP/s | 64.01% |
+| **Vectorized Smem Loading** | 6.710 ms | 20483.71 GFLOP/s | 86.62% |
+| **Warp Tiling** | 6.190 ms | 22204.23 GFLOP/s | 93.89% |
+| **Warp Tiling (float4 Load)** | 5.868 ms | 23423.01 GFLOP/s | **99.05%** |
+| **NVIDIA cuBLAS** | 5.812 ms | 23648.83 GFLOP/s | **100.00%** |
 
 ### $8192 \times 8192 \times 8192$ Matrix Performance Breakdown
 
@@ -89,7 +109,9 @@ All benchmarks were recorded on the following system:
 | **Shared Memory (Smem) Tiled** | 386.29 ms | 2846.37 GFLOP/s | 12.20% |
 | **1D Block Tiling (Coalesced)** | 119.87 ms | 9172.77 GFLOP/s | 39.32% |
 | **2D Block Tiling** | 74.96 ms | 14668.46 GFLOP/s | 62.88% |
-| **Vectorized Smem Loading** | 55.92 ms | 19663.92 GFLOP/s | **84.29%** |
+| **Vectorized Smem Loading** | 55.92 ms | 19663.92 GFLOP/s | 84.29% |
+| **Warp Tiling** | 53.06 ms | 20721.30 GFLOP/s | 88.82% |
+| **Warp Tiling (float4 Load)** | 50.06 ms | 21964.40 GFLOP/s | **94.15%** |
 | **NVIDIA cuBLAS** | 47.13 ms | 23328.82 GFLOP/s | **100.00%** |
 
 1. **CPU vs GPU Baseline**: Even the naive uncoalesced CUDA kernel achieves a **~780x speedup** over single-threaded C++ GEMM at $2048 \times 2048$ matrix size due to massive parallel execution across GPU cores.
@@ -98,7 +120,9 @@ All benchmarks were recorded on the following system:
 4. **1D Block Tiling & Register Reuse**: Assigning multiple output elements to each thread's register space significantly improves arithmetic intensity. When paired with coalesced global memory loads (`1d_blocktiling_coalescing.cu`), performance reaches **11101.55 GFLOP/s** (11.1 TFLOP/s)—a **3.19x speedup** over 2D Shared Memory Tiling and reaching **44.54% of cuBLAS performance**.
 5. **2D Block Tiling (2D Thread/Register Tiling)**: Extending register caching into two dimensions ($4 \times 4$ per-thread tile) alongside 2D shared memory caching (`src/2d_blocktiling.cu`) reuses cached values across both rows and columns. This boosts performance to **16093.69 GFLOP/s** (16.09 TFLOP/s) at $2048 \times 2048$—achieving **64.57% of cuBLAS performance**.
 6. **Vectorized Shared Memory Loading**: Utilizing 128-bit vector instructions (`float4` loads and stores) combined with expanded 2D block tiling ($8 \times 8$ per-thread tile) maximizes global and shared memory transaction efficiency. At $2048 \times 2048$, throughput reaches **18996.48 GFLOP/s** (**76.22% of cuBLAS**), and at $4096 \times 4096$, it peaks at **20483.71 GFLOP/s** (**86.62% of cuBLAS**).
-7. **cuBLAS Peak Performance**: cuBLAS reaches **24.9 TFLOP/s** throughput at $2048 \times 2048$. It achieves this level by leveraging hardware-level features such as 2D thread tiling, vectorized memory operations (`float4`), warp shuffle instructions, double buffering/pipelining, and hardware Tensor Cores.
+7. **Warp Tiling**: Dividing thread blocks into warp-level execution tiles ($64 \times 32$ warp tiles within $128 \times 128$ block tiles) and incorporating padded shared memory layouts drastically reduces bank conflicts and thread synchronization stalls. At $2048 \times 2048$, performance jumps to **21117.28 GFLOP/s** (**84.72% of cuBLAS**).
+8. **Warp Tiling with Vectorized Register Loading**: Vectorizing shared-memory-to-register reads using `float4` (128-bit) access patterns further optimizes register pressure and memory instruction pipeline throughput. At $4096 \times 4096$, performance reaches **23423.01 GFLOP/s** (**99.05% of cuBLAS**), virtually matching vendor-optimized cuBLAS performance!
+9. **cuBLAS Peak Performance**: cuBLAS reaches **24.9 TFLOP/s** throughput at $2048 \times 2048$. It achieves this level by leveraging hardware-level features such as 2D thread tiling, vectorized memory operations (`float4`), warp shuffle instructions, double buffering/pipelining, and hardware Tensor Cores.
 
 ---
 
@@ -116,7 +140,9 @@ cuda-gemm/
 │   ├── naive_benchmark.txt            # Uncoalesced CUDA kernel log
 │   ├── naive_coalescing_benchmark.txt # Coalesced CUDA kernel log
 │   ├── smem_benchmark.txt             # Shared memory tiling log
-│   └── vectorized_smem_loading_benchmark.txt # Vectorized shared memory loading log
+│   ├── vectorized_smem_loading_benchmark.txt # Vectorized shared memory loading log
+│   ├── wraptiling_benchmark.txt       # Warp Tiling kernel log
+│   └── wraptiling_float4_load_benchmark.txt # Warp Tiling with float4 load kernel log
 ├── src/                               # Source implementations
 │   ├── 1d_blocktiling_coalescing.cu   # 1D blocktiling CUDA kernel with coalesced loads
 │   ├── 1d_blocktiling_naive.cu        # 1D blocktiling CUDA kernel (uncoalesced)
@@ -126,7 +152,9 @@ cuda-gemm/
 │   ├── naive.cu                       # Uncoalesced CUDA kernel
 │   ├── naive_coalescing.cu            # Memory-coalesced CUDA kernel
 │   ├── smem_caching.cu                # Tiled Shared Memory CUDA kernel
-│   └── vectorized_smem_loading.cu     # Vectorized shared memory loading (float4) CUDA kernel
+│   ├── vectorized_smem_loading.cu     # Vectorized shared memory loading (float4) CUDA kernel
+│   ├── wraptiling.cu                  # Warp Tiling CUDA kernel
+│   └── wraptiling_float4_load.cu      # Warp Tiling with float4 loading CUDA kernel
 └── README.md                          # Project documentation
 ```
 
@@ -143,6 +171,8 @@ Individual execution logs are stored in the [`benchmarks/`](./benchmarks/) folde
 - [`benchmarks/1d_blocktiling_benchmark.txt`](./benchmarks/1d_blocktiling_benchmark.txt)
 - [`benchmarks/2d_blocktiling_benchmark.txt`](./benchmarks/2d_blocktiling_benchmark.txt)
 - [`benchmarks/vectorized_smem_loading_benchmark.txt`](./benchmarks/vectorized_smem_loading_benchmark.txt)
+- [`benchmarks/wraptiling_benchmark.txt`](./benchmarks/wraptiling_benchmark.txt)
+- [`benchmarks/wraptiling_float4_load_benchmark.txt`](./benchmarks/wraptiling_float4_load_benchmark.txt)
 - [`benchmarks/cublas_benchmark.txt`](./benchmarks/cublas_benchmark.txt)
 
 ---
